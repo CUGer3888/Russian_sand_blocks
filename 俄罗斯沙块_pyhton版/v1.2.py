@@ -72,9 +72,9 @@ def astar(start, goal, grid,type):
 
 #地图大小
 LENGTH = 300
-WIDTH = 300
+WIDTH = 450
 #方块大小
-BLOCK_SIZE = 30
+BLOCK_SIZE = 40
 #起始位置
 INIT_X = 100
 INIT_Y = 20
@@ -82,7 +82,7 @@ INIT_Y = 20
 INIT_X_1 = 100
 INIT_Y_1 = 20
 #红黄蓝绿
-num_to_color = {0:(255,255,255),1:(255,0,0),2:(255,255,0),3:(0,255,0),4:(0,0,255)}
+num_to_color = {0:(255,255,255),1:(255,0,0),2:(255,255,0),3:(0,255,0),4:(0,0,255),5:(0,0,0)}
 map = [[0 for i in range(LENGTH)] for j in range(WIDTH)]
 s = False
 
@@ -143,6 +143,17 @@ def change(map_,index):
             map_[i][INIT_X+j] = map_[i-1][INIT_X+j]
         map_[0][INIT_X+j] = temp
     return map_
+def all_update_game(map):
+    #从倒数第二排开始
+    for i in range(WIDTH-2,0,-1):
+        for j in range(LENGTH-1):
+            if map[i][j] == 0:
+                continue
+            if map[i+1][j] == 0:
+                tmp = map[i][j]
+                map[i][j] = map[i+1][j]
+                map[i+1][j] = tmp
+    return map
 def update_game(map_):
     global chance_index
     chance_index = 0
@@ -250,7 +261,7 @@ def check(map, x, y, type):
     q = deque([(x, y)])
     while q:
         cur_x, cur_y = q.popleft()
-        if cur_x < 0 or cur_y < 0 or cur_x > len(map) - 1 or cur_y > len(map)-1:
+        if cur_x < 0 or cur_y < 0 or cur_x > len(map) - 1 or cur_y > len(map[0])-1:
             continue
         if map[cur_x][cur_y]!= type:
             continue
@@ -263,11 +274,11 @@ def check(map, x, y, type):
     return map
 
 def start_check(map, i):
-    print(map)
+    # print(map)
     y = i[0]
     TYP = map[y][0]
-    print("y",y)
-    print("type",TYP)
+    # print("y",y)
+    # print("type",TYP)
     map = check(map, y, 0, TYP)
     return map
 def xiaochu(map):
@@ -373,6 +384,7 @@ def draw_block(map,num):
     #在地图右下角，绘制10乘10的正方形
     pygame.draw.rect(screen, num_to_color[num], (WIDTH_1-10, HEIGHT_1-10, 10, 10))
 
+
 def get_lis(map_):
     lis_ = []
     for i in range(WIDTH):
@@ -380,16 +392,23 @@ def get_lis(map_):
             if map_[i][j] == TYPE_1:
                 lis_.append([j,i])
     return lis_
+def get_num(map):
+    num = 0
+    for i in range(WIDTH):
+        for j in range(LENGTH):
+            if map[i][j] != 0:
+                num += 1
+    return num
 NUM=random.randint(1,4)
-TYPE =5
-NEXT_NUM = random.randint(1,4)
+TYPE = 3
+NEXT_NUM = random.randint(1,TYPE)
 map = init(map,NUM, random.randint(0,TYPE))
 """ --- """
 # 游戏窗口大小
-WIDTH_1 = 800
+WIDTH_1 = 400
 HEIGHT_1 = 600
 # 方块颜色
-BLOCK_COLOR = (255, 0, 0)
+BLOCK_COLOR = (255,255,255)
 
 # 初始化pygame
 pygame.init()
@@ -402,9 +421,10 @@ background = pygame.transform.scale(background, (WIDTH_1, HEIGHT_1))
 # 透明化
 background.set_alpha(128)
 
+font = pygame.font.Font(None, 36)
 clock = pygame.time.Clock()
 running = True
-
+goal = 0
 step = 0
 while running:
     # start_time = time.time()
@@ -418,12 +438,18 @@ while running:
         if t == 0:
             a = xiaochu(map)
             if a != None:
-                print(a)
-                print("开始消除")
+                # print(a)
+                # print("开始消除")
+                num_1 = get_num(map)
                 map = start_check(map,a)
+                num_2 = get_num(map)
+                goal = num_1-num_2
+            for i in range(100):
+                map = all_update_game(map)
+            draw_block(map, NEXT_NUM)
             NUM = NEXT_NUM
             map = add_init(map,NUM)
-            NEXT_NUM = random.randint(1,4)
+            NEXT_NUM = random.randint(1,TYPE)
             INIT_X = 100
             INIT_Y = 20
             INIT_X_1 = 100
@@ -431,15 +457,22 @@ while running:
 
 # screen.blit(background,(0,0))  #对齐的坐标
         #pygame.display.update()   #显示内容
-
-    screen.blit(background, (0, 0))
-
+    #根据地图大小画边框
+    if goal!=0:
+        text = font.render(str(goal), True, (0,0,0))
+        #绘制在左下角
+        screen.blit(text, (0, HEIGHT_1 - 36))
+    # screen.blit(background, (0, 0))
+    screen.fill((0,0,30))
+    pygame.draw.rect(screen, BLOCK_COLOR, (0, 0, LENGTH , WIDTH ), 5)
     draw_block(map,NEXT_NUM)
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(180)
     #记录当前坐标
     current_x = INIT_X
     current_y = INIT_Y + step
+    current_x_1 = current_x
+    current_y_1 = current_y
     # print(current_y)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -449,12 +482,12 @@ while running:
                 # 按键按下
                 if event.key == pygame.K_UP:
                     pass
-                    # map = rotate(map,current_x,current_y,BLOCK_SIZE,BLOCK_SIZE,-1)
-                    # print("处理上移事件")
+                    map = rotate(map,current_y_1,current_x_1,BLOCK_SIZE,BLOCK_SIZE,-1)
+                    print("处理上移事件")
                 elif event.key == pygame.K_DOWN:
                     pass
-                    # map = rotate(map, current_x, current_y, BLOCK_SIZE, BLOCK_SIZE, 1)
-                    # print("处理下移事件")
+                    map = rotate(map, current_y_1, current_x_1, BLOCK_SIZE, BLOCK_SIZE, 1)
+                    print("处理下移事件")
                 elif event.key == pygame.K_LEFT:
                     for _ in range(20):
                         if INIT_X<=0:
